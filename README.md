@@ -1,4 +1,5 @@
 **TrialReads
+
 TrialReads is a Streamlit application that leverages LangChain and Perplexity AI to generate summaries of the first three chapters of books. This tool helps you decide whether to purchase a book by providing concise chapter-by-chapter summaries.**
 
 ### Features
