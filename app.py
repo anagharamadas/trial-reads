@@ -4,8 +4,8 @@ import streamlit as st
 from langchain_core.prompts import ChatPromptTemplate  # type: ignore
 import re
 
-st.title("Explain My Model")
-PPLX_API_KEY = st.text_input("Enter your API key: ", type="password")
+st.title("Summarise the Book")
+PPLX_API_KEY = st.text_input("Enter your PerplexityAPI key: ", type="password")
 
 
 os.environ["PPLX_API_KEY"] = PPLX_API_KEY
@@ -47,7 +47,7 @@ if st.button("Get Summary"):
                 ])
             final_response_prompt = ChatPromptTemplate.from_messages([
                 ("system", "You are a helpful assistant. Provide a concise answer."),
-                ("human", "What is the final summary of the book {book_name}?")
+                ("human", "Summarise the book{book_name} chapter by chapter of first 3 chaptersin 250 words each?")
             ])
             # Create a chain for internal reasoning
             internal_chain = internal_reasoning_prompt | chat
