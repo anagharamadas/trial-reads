@@ -1,72 +1,46 @@
-import os
-from langchain_community.chat_models import ChatPerplexity
 import streamlit as st
-from langchain_core.prompts import ChatPromptTemplate  # type: ignore
-import re
+from book_summariser import get_summary
+from library_manager import library_management_system
 
-st.title("Summarise the Book")
-PPLX_API_KEY = st.text_input("Enter your PerplexityAPI key: ", type="password")
+st.title("AI Assistant: Book Summarizer & Knowledge Retriever")
 
+agent_choice = st.radio(
+    "Choose the AI agent you want to use:",
+    ("Book Summarizer", "Library Manager")
+)
 
-os.environ["PPLX_API_KEY"] = PPLX_API_KEY
-
-
-
-
-# User input for the question
-book_name = st.text_input("Enter the book name:")
-author_name = st.text_input("Enter the author name:")
-
-if st.button("Get Summary"):
-    if not PPLX_API_KEY:
-         st.error("Please enter your Perplexity API key.")
-    elif not book_name:
-        st.error("Please enter the book name.")
-    elif not author_name:
-        st.error("Please enter the author name.")
-    else:
-
-        
-        headers = {
+if agent_choice == "Book Summarizer":
+    openai_api_key = st.text_input("Enter your Open API key:", type="password")
+    book_name = st.text_input("Enter the book name:")
+    author_name = st.text_input("Enter the author name:")
+    if st.button("Get Summary"):
+        if not openai_api_key or not book_name or not author_name:
+            st.error("Please fill in all fields.")
+        else:
+            headers = {
             "accept": "application/json",
             "content-type": "application/json",
-            "authorization": f"Bearer {PPLX_API_KEY}"
-        }
+            "authorization": f"Bearer {openai_api_key}"
+            }
 
-        try:
-            # Make the API request
-            # prompt = ChatPromptTemplate.from_messages([("system", content)])
-            chat = ChatPerplexity(
-                temperature=0, 
-                pplx_api_key=os.environ["PPLX_API_KEY"],
-                model="sonar-pro"
-                )
-            internal_reasoning_prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a helpful assistant."),
-                ("human", "Summarise the book {book_name} by the author {author_name}.")
-                ])
-            final_response_prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a helpful assistant. Provide a concise answer."),
-                ("human", "Summarise the book{book_name} chapter by chapter of first 3 chaptersin 250 words each?")
-            ])
-            # Create a chain for internal reasoning
-            internal_chain = internal_reasoning_prompt | chat
-
-            # Create a chain for the final response
-            final_chain = final_response_prompt | chat
-
-
-            internal_response = internal_chain.invoke({"book_name": book_name, "author_name": author_name})
-            final_response = final_chain.invoke({"book_name": book_name})
-
-            cleaned_output = re.sub(r'<think>.*?</think>', '', final_response.content, flags=re.DOTALL)
-           
-
-            # Display the answer
+            summary = get_summary(book_name, author_name, headers)
             st.subheader("Summary:")
-            st.write(final_response.content)
+            st.write(summary)
 
-        except Exception as e:
-            # Handle errors gracefully
-            st.error(f"An error occurred: {str(e)}")
-
+elif agent_choice == "Library Manager":
+    openai_api_key = st.text_input("Enter your Open API key:", type="password")
+    user_query = st.text_input("Enter your query for the knowledge base:")
+    if st.button("Retrieve Information"):
+        if not openai_api_key:
+            st.error("Please enter your Open API key.")
+        elif not user_query:
+            st.error("Please enter your query.")
+        else:
+            headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "authorization": f"Bearer {openai_api_key}"
+            }
+            rag_response = library_management_system(user_query, headers)
+            st.subheader("Response:")
+            st.write(rag_response)

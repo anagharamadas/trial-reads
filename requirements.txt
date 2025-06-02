@@ -3,3 +3,7 @@ langchain-community
 langchain-core
 requests
 openai
+llama-index
+pypdf
+ipykernel
+python-dotenv
