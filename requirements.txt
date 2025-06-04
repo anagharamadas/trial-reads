@@ -1,9 +1,13 @@
 streamlit
-langchain-community
-langchain-core
 requests
 openai
-llama-index
+llama-index-core
+llama-index-embeddings-openai
+llama-index-vector-stores-chroma
+llama-index-llms-openai
 pypdf
 ipykernel
 python-dotenv
+chromadb==0.4.15
+protobuf==3.20.3
+grpcio>=1.58.0
