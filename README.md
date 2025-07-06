@@ -7,7 +7,7 @@ TrialReads is a Streamlit application that leverages LangChain and Perplexity AI
 - **Book Recommendations**: Get suggestions for similar books after generating summaries
 - **Library Manager**: Chatbot interface to query your personal reading history
 - Simple and intuitive user interface
-- Powered by Perplexity AI's advanced language model capabilities
+- Powered by OpenAI's advanced language model capabilities
 
 
 ### Installation
