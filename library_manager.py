@@ -1,3 +1,7 @@
+from langfuse import observe
+
+
+# @observe(name="library_management_system")
 def library_management_system(user_query, headers):
     import os
     # Fix protobuf compatibility issue

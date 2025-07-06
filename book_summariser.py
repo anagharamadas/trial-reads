@@ -1,9 +1,13 @@
+
+
+# @observe(name="book_summariser")
 def get_summary(book_name, author_name, headers):
     import os
-    from langchain_community.chat_models import ChatOpenAI
+    from langchain_openai import ChatOpenAI
     import streamlit as st
     from langchain_core.prompts import ChatPromptTemplate  # type: ignore
     import re
+    from langfuse import observe
 
 
     auth_header = headers.get("authorization", "")
@@ -19,7 +23,7 @@ def get_summary(book_name, author_name, headers):
     chat = ChatOpenAI(
         temperature=0, 
         openai_api_key=api_key,
-        model="gpt-4o"
+        model="gpt-4o-mini"
         )
     internal_reasoning_prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a helpful assistant."),
