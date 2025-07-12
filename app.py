@@ -3,8 +3,6 @@ from book_summariser import get_summary
 from library_manager import library_management_system
 from recommendation_system import recommendation_system
 import os
-from langfuse import observe
-from langfuse import Langfuse
 from dotenv import load_dotenv
 load_dotenv()
 
