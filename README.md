@@ -1,15 +1,14 @@
 # TrialReads
 
-TrialReads is a Streamlit application that leverages LangChain and Perplexity AI to generate summaries of the first three chapters of books. This tool helps you decide whether to purchase a book by providing concise chapter-by-chapter summaries.**
+TrialReads is a Streamlit application that leverages LangChain and Open AI to generate summaries of the first three chapters of books. This tool helps you decide whether to purchase a book by providing concise chapter-by-chapter summaries.**
 
-### Features
-- Generate detailed summaries of the first three chapters of any book
-
-- Approximately 250 words per chapter summary
-
+## Features
+- **Chapter Summaries**: Generate detailed summaries of the first three chapters of any book (~250 words per chapter)
+- **Book Recommendations**: Get suggestions for similar books after generating summaries
+- **Library Manager**: Chatbot interface to query your personal reading history
 - Simple and intuitive user interface
+- Powered by OpenAI's advanced language model capabilities
 
-- Powered by Perplexity AI's advanced language model capabilities
 
 ### Installation
 Follow these steps to set up and run the application locally:
@@ -34,70 +33,35 @@ Start the Streamlit app:
 
 `streamlit run app.py`
 
-### Usage
+## Usage
 
-- Open the application in your browser (usually at http://localhost:8501).
+### Chapter Summaries & Recommendations
+1. Open the application in your browser (usually at `http://localhost:8501`)
+2. Enter your OpenAI API Key
+3. Input the book title (e.g., "Pride and Prejudice") and author
+4. Click **"Get Summary"** to generate chapter summaries
+5. After summary generation, click **"Get Recommendations"** for 5 similar books
 
-- Enter your Perplexity API Key in the provided field.
+### Library Manager
+1. Navigate to the **"Library Manager"** tab
+2. Upload your book history CSV file with these columns:
+   - `book_name`: Title of the book
+   - `author`: Author's name
+   - `status`: Reading status (`Reading`, `Yet to Buy`, `Ready to Start`, `Completed`)
+   - `year_completed`: Year finished (leave blank for unread books)
+3. Ask natural language questions in the chat interface:
+   ```plaintext
+   • "How many books by Dan Brown have I completed?"
+   • "Show me books I finished in 2023"
+   • "Which fantasy books am I currently reading?"
+   • "List all unread books by female authors"
 
-- Input the name of the book (e.g., "Pride and Prejudice", "Harry Potter and The Philosopher's Stone").
-
-- Input the name of the author.
-
-- Click on the "Get Summary" button to generate a short summary of the first 3 chapters of the book.
-
-### Code Overview
-
-The main functionality of the app is implemented in app.py. Here's a quick breakdown of its components:
-
-**Streamlit UI:**
-
-- Accepts user input for the Perplexity API key, the book name, and the author's name .
-
-- Displays generated summaries or error messages.
-
-**LangChain Integration:**
-
-- Uses ChatPerplexity from LangChain's community package to interact with Perplexity's API.
-
-**Error Handling:**
-
-- Handles invalid API keys, missing inputs, and API response errors gracefully.
-
-**Dependencies**
-The application requires the following Python libraries:
-
-- streamlit
-
-- langchain-community
-
-- langchain-core
-
-- requests
 
 *You can install all dependencies using the provided requirements.txt.*
 
 **Environment Variables**
-The application uses an environment variable for securely handling the Perplexity API key. The key is entered via the UI and stored temporarily in os.environ.
+The application uses an environment variable for securely handling the OpenAI API key. The key is entered via the UI and stored temporarily in os.environ.
 
-###Troubleshooting
-
-**Common Errors:**
-   401 Authorization Required:
-
-- Ensure your Perplexity API key is valid and correctly entered.
-
-- Verify that your account has sufficient credits.
-
-**Empty Response:**
-
-- Check if the model name you entered is supported by Perplexity's API.
-
-**Application Not Running:**
-
-- Ensure all dependencies are installed correctly.
-
-- Verify that you're running Python 3.8 or higher.
 
 ### Contributing
 
@@ -120,4 +84,4 @@ The application uses an environment variable for securely handling the Perplexit
 
 - LangChain for enabling seamless integration with LLMs.
 
-- Perplexity AI for their powerful LLM API.
+- OpenAI API for their powerful LLM API.
