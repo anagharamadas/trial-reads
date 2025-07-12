@@ -1,6 +1,4 @@
 
-
-
 def get_summary(book_name, author_name, headers):
     import os
     from langchain_openai import ChatOpenAI

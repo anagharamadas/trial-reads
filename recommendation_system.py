@@ -6,6 +6,8 @@ from langchain_core.messages import HumanMessage
 import os
 from dotenv import load_dotenv
 import streamlit as st
+
+
 load_dotenv()
 
 
@@ -45,6 +47,7 @@ def generate_response(state: State, api_key: str) -> Dict[str, Any]:
     response = chat.invoke([message])
     
     return {"response": response.content}
+
 
 def recommendation_system(book_name: str, author_name: str, headers: Dict[str, str]) -> str:
     # Extract API key from headers
