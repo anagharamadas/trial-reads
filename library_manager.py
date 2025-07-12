@@ -1,10 +1,20 @@
+from llama_index.core import (
+    VectorStoreIndex,
+    SimpleDirectoryReader,
+)
+from llama_index.vector_stores.chroma import ChromaVectorStore
+from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.ingestion import IngestionPipeline
+from llama_index.llms.openai import OpenAI
+import chromadb
+import os
 
 def library_management_system(user_query, headers):
-    import os
+    
     # Fix protobuf compatibility issue
     os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
-    import chromadb
-
+   
     auth_header = headers.get("authorization", "")
 
     # If the header follows the 'Bearer <token>' format, split and get the token
@@ -15,15 +25,7 @@ def library_management_system(user_query, headers):
 
     os.environ["OPENAI_API_KEY"] = api_key
 
-    from llama_index.core import (
-        VectorStoreIndex,
-        SimpleDirectoryReader,
-    )
-    from llama_index.vector_stores.chroma import ChromaVectorStore
-    from llama_index.embeddings.openai import OpenAIEmbedding
-    from llama_index.core.node_parser import SentenceSplitter
-    from llama_index.core.ingestion import IngestionPipeline
-    from llama_index.llms.openai import OpenAI
+
 
 
     # Initialize ChromaDB (persistent client will create the db if it doesn't exist)
