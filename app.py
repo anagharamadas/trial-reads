@@ -1,12 +1,13 @@
 import streamlit as st
 from book_summariser import get_summary
 from library_manager import library_management_system
-from recommendation_system import recommendation_system
+from recommendation_system import recommendation_system, generate_amazon_link
 import os
 from dotenv import load_dotenv
 from langgraph.graph import StateGraph, START, END
 from langchain_openai import ChatOpenAI
 from typing import Dict, Any, TypedDict
+import re
 
 load_dotenv()
 
@@ -68,7 +69,7 @@ def end_node(state: AgentState) -> AgentState:
     """End node that passes through the state"""
     return state
 
-st.title("AI Assistant: Book Summarizer & Knowledge Retriever")
+st.title("Trial Reads: Book Summarizer & Library Manager")
 
 agent_choice = st.radio(
     "Choose the AI agent you want to use:",
@@ -168,12 +169,39 @@ else:
             if st.button("Get Book Recommendations"):
                 try:
                     st.subheader("Book Recommendations:")
-                    recommendation_system_response = recommendation_system(
+                    recommendation_result = recommendation_system(
                         st.session_state.summary_book_name, 
                         st.session_state.summary_author_name, 
                         st.session_state.summary_headers
                     )
-                    st.write(recommendation_system_response)
+                    
+                    # Display the original recommendations
+                    st.markdown(recommendation_result["original_response"])
+                    
+                    # Display Amazon buttons for each recommendation
+                    recommendations = recommendation_result["recommendations"]
+                    
+                    if recommendations:
+                        st.subheader("🛒 Purchase Links:")
+                        for i, rec in enumerate(recommendations, 1):
+                            if 'title' in rec and 'author' in rec:
+                                amazon_link = generate_amazon_link(rec['title'], rec['author'])
+                                
+                                # Create a container for each book
+                                with st.container():
+                                    st.write(f"**{i}.** {rec['title']} by {rec['author']}")
+                                    if 'reason' in rec:
+                                        st.write(f"*{rec['reason']}*")
+                                    
+                                    # Amazon button
+                                    col1, col2 = st.columns([1, 4])
+                                    with col1:
+                                        st.link_button("🛒 Buy on Amazon", amazon_link)
+                                    with col2:
+                                        st.write("")  # Spacer
+                                    
+                                    st.divider()
+                    
                 except Exception as e:
                     st.error(f"Error generating recommendations: {str(e)}")
 

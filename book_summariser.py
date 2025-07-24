@@ -1,7 +1,7 @@
 import os
 from langchain_openai import ChatOpenAI
 import streamlit as st
-from langchain_core.prompts import ChatPromptTemplate  # type: ignore
+from langchain_core.prompts import ChatPromptTemplate  
 import re
 def get_summary(book_name, author_name, headers):
     
