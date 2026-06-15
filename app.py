@@ -13,21 +13,20 @@ st.caption(
     "or answer questions about your personal library."
 )
 
-openai_api_key = st.text_input("Enter your OpenAI API key:", type="password")
+# The OpenAI API key is read from the environment (loaded from .env by load_dotenv above),
+# never from the UI. The recommendation system expects the Bearer-token headers dict, and the
+# book_agent tools / library_manager read os.environ["OPENAI_API_KEY"] directly.
+openai_api_key = os.environ.get("OPENAI_API_KEY")
 
 if not openai_api_key:
-    st.error("Please enter your OpenAI API key.")
+    st.error("OPENAI_API_KEY is not set. Add it to a .env file in the project root.")
     st.stop()
 
-# Make the key available to the agent tools (they rebuild headers from this) and to the
-# recommendation system, which expects the Bearer-token headers dict.
-os.environ["OPENAI_API_KEY"] = openai_api_key
 headers = {"authorization": f"Bearer {openai_api_key}"}
 
-# Build the agent once per session (rebuild if the key changes).
-if st.session_state.get("agent_key") != openai_api_key:
+# Build the agent once per session (the key is fixed for the process lifetime).
+if "agent" not in st.session_state:
     st.session_state.agent = build_agent(openai_api_key)
-    st.session_state.agent_key = openai_api_key
 
 if "messages" not in st.session_state:
     st.session_state.messages = []

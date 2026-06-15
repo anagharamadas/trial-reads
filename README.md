@@ -37,10 +37,11 @@ Start the Streamlit app:
 
 ### Chapter Summaries & Recommendations
 1. Open the application in your browser (usually at `http://localhost:8501`)
-2. Enter your OpenAI API Key
-3. Input the book title (e.g., "Pride and Prejudice") and author
-4. Click **"Get Summary"** to generate chapter summaries
-5. After summary generation, click **"Get Recommendations"** for 5 similar books
+2. Input the book title (e.g., "Pride and Prejudice") and author
+3. Click **"Get Summary"** to generate chapter summaries
+4. After summary generation, click **"Get Recommendations"** for 5 similar books
+
+> The OpenAI API key is read from a `.env` file (see **Environment Variables** below), not entered in the UI.
 
 ### Library Manager
 1. Navigate to the **"Library Manager"** tab
@@ -60,7 +61,13 @@ Start the Streamlit app:
 *You can install all dependencies using the provided requirements.txt.*
 
 **Environment Variables**
-The application uses an environment variable for securely handling the OpenAI API key. The key is entered via the UI and stored temporarily in os.environ.
+The application reads the OpenAI API key from an environment variable. Copy `.env.example` to `.env` in the project root and set your key:
+
+```
+OPENAI_API_KEY=your-openai-api-key-here
+```
+
+`load_dotenv()` loads this at startup. The `.env` file is gitignored and must never be committed.
 
 
 ### Contributing

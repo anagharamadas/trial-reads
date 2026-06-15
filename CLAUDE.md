@@ -16,7 +16,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-There is no test suite, linter, or build step. The OpenAI API key is entered at runtime through the Streamlit UI (not read from `.env` for the LLM calls), so the running app needs no env file.
+There is no test suite, linter, or build step. The OpenAI API key is read from the environment — `app.py` calls `load_dotenv()`, so a `.env` file in the project root with `OPENAI_API_KEY=...` is required (copy `.env.example` to `.env` and fill it in). `.env` is gitignored and must never be committed; there is no UI field for the key.
 
 ## Architecture
 
