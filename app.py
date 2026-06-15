@@ -1,225 +1,105 @@
-import streamlit as st
-from book_summariser import get_summary
-from library_manager import library_management_system
-from recommendation_system import recommendation_system, generate_amazon_link
 import os
+import streamlit as st
 from dotenv import load_dotenv
-from langgraph.graph import StateGraph, START, END
-from langchain_openai import ChatOpenAI
-from typing import Dict, Any, TypedDict
-import re
+
+from book_agent import build_agent, run_agent
+from recommendation_system import recommendation_system, generate_amazon_link
 
 load_dotenv()
 
-# Define the state schema as a TypedDict
-class AgentState(TypedDict):
-    agent_choice: str
-    book_name: str
-    author_name: str
-    user_query: str
-    openai_api_key: str
-    headers: Dict
-    summary: str
-    response: str
-    error: str
-
-# Routing function to determine which agent to use
-def route_agent(state: AgentState) -> str:
-    """Route to the appropriate agent based on user choice"""
-    if state.get("agent_choice") == "Book Summarizer":
-        return "get_summary"
-    elif state.get("agent_choice") == "Library Manager":
-        return "library_management_system"
-    else:
-        return "end"
-
-# Agent execution functions
-def execute_book_summarizer(state: AgentState) -> AgentState:
-    """Execute the book summarizer agent"""
-    book_name = state.get("book_name")
-    author_name = state.get("author_name")
-    headers = state.get("headers")
-    
-    if book_name and author_name and headers:
-        try:
-            summary = get_summary(book_name, author_name, headers)
-            return {"summary": summary, "agent_choice": state.get("agent_choice")}
-        except Exception as e:
-            return {"error": f"Error generating summary: {str(e)}"}
-    return {"error": "Missing required fields for book summarizer"}
-
-def execute_library_manager(state: AgentState) -> AgentState:
-    """Execute the library manager agent"""
-    user_query = state.get("user_query")
-    headers = state.get("headers")
-    
-    if user_query and headers:
-        try:
-            response = library_management_system(user_query, headers)
-            return {"response": response, "agent_choice": state.get("agent_choice")}
-        except Exception as e:
-            return {"error": f"Error retrieving information: {str(e)}"}
-    return {"error": "Missing required fields for library manager"}
-
-def start_node(state: AgentState) -> AgentState:
-    """Start node that passes through the state"""
-    return state
-
-def end_node(state: AgentState) -> AgentState:
-    """End node that passes through the state"""
-    return state
-
 st.title("Trial Reads: Book Summarizer & Library Manager")
-
-agent_choice = st.radio(
-    "Choose the AI agent you want to use:",
-    ("Book Summarizer", "Library Manager")
+st.caption(
+    "Ask anything in one place — the assistant figures out whether to summarize a book "
+    "or answer questions about your personal library."
 )
 
-openai_api_key = st.text_input("Enter your Open API key:", type="password")
+openai_api_key = st.text_input("Enter your OpenAI API key:", type="password")
 
 if not openai_api_key:
-    st.error("Please enter your Open API key.")
-else:
-    headers = {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "authorization": f"Bearer {openai_api_key}"
-    }
-    
-    llm = ChatOpenAI(
-        temperature=0, 
-        openai_api_key=openai_api_key,
-        model="gpt-4o-mini"
-    )
-    
-    # Create the graph
-    builder = StateGraph(AgentState)
-    
-    # Add nodes
-    builder.add_node("start", start_node)
-    builder.add_node("get_summary", execute_book_summarizer)
-    builder.add_node("library_management_system", execute_library_manager)
-    builder.add_node("end", end_node)
-    
-    # Add edge from START to start node
-    builder.add_edge(START, "start")
-    
-    # Add conditional edges based on agent choice
-    builder.add_conditional_edges(
-        "start",
-        route_agent,
-        {
-            "get_summary": "get_summary",
-            "library_management_system": "library_management_system",
-            "end": "end"
-        }
-    )
-    
-    # Add edges to end
-    builder.add_edge("get_summary", END)
-    builder.add_edge("library_management_system", END)
-    
-    # Compile the graph
-    graph = builder.compile()
-    
-    # Initialize state with agent choice
-    initial_state = {
-        "agent_choice": agent_choice,
-        "headers": headers,
-        "book_name": "",
-        "author_name": "",
-        "user_query": "",
-        "openai_api_key": openai_api_key,
-        "summary": "",
-        "response": "",
-        "error": ""
-    }
-    
-    if agent_choice == "Book Summarizer":
-        book_name = st.text_input("Enter the book name:")
-        author_name = st.text_input("Enter the author name:")
-        
-        if st.button("Get Summary"):
-            if not book_name or not author_name:
-                st.error("Please fill in all fields.")
-            else:
-                # Update state with book details
-                initial_state["book_name"] = book_name
-                initial_state["author_name"] = author_name
-                
-                # Execute the graph
-                result = graph.invoke(initial_state)
-                
-                if "summary" in result:
-                    st.subheader("Summary:")
-                    st.write(result["summary"])
-                    
-                    # Store the summary and headers in session state for recommendations
-                    st.session_state.summary_generated = True
-                    st.session_state.summary_headers = headers
-                    st.session_state.summary_book_name = book_name
-                    st.session_state.summary_author_name = author_name
-                else:
-                    st.error(result.get("error", "An error occurred"))
-        
-        # Show recommendation button only after summary is generated
-        if st.session_state.get('summary_generated', False):
-            st.divider()
-            if st.button("Get Book Recommendations"):
+    st.error("Please enter your OpenAI API key.")
+    st.stop()
+
+# Make the key available to the agent tools (they rebuild headers from this) and to the
+# recommendation system, which expects the Bearer-token headers dict.
+os.environ["OPENAI_API_KEY"] = openai_api_key
+headers = {"authorization": f"Bearer {openai_api_key}"}
+
+# Build the agent once per session (rebuild if the key changes).
+if st.session_state.get("agent_key") != openai_api_key:
+    st.session_state.agent = build_agent(openai_api_key)
+    st.session_state.agent_key = openai_api_key
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+
+def _render_recommendations(rec_result):
+    """Render a recommendations message (markdown + Amazon purchase buttons)."""
+    st.markdown(rec_result["original_response"])
+    recommendations = rec_result["recommendations"]
+    if recommendations:
+        st.subheader("\U0001f6d2 Purchase Links:")
+        for i, rec in enumerate(recommendations, 1):
+            if "title" in rec and "author" in rec:
+                amazon_link = generate_amazon_link(rec["title"], rec["author"])
+                with st.container():
+                    st.write(f"**{i}.** {rec['title']} by {rec['author']}")
+                    if "reason" in rec:
+                        st.write(f"*{rec['reason']}*")
+                    st.link_button("\U0001f6d2 Buy on Amazon", amazon_link)
+                    st.divider()
+
+
+# Index of the most recent summary message (to attach the recommendation button to it).
+last_summary_idx = None
+for i, msg in enumerate(st.session_state.messages):
+    if msg.get("kind") == "summary":
+        last_summary_idx = i
+
+# Render the chat history.
+for i, msg in enumerate(st.session_state.messages):
+    with st.chat_message(msg["role"]):
+        kind = msg.get("kind", "text")
+        if kind == "recommendations":
+            _render_recommendations(msg["data"])
+        else:
+            st.write(msg["content"])
+
+        # Offer a recommendation button under the latest summary, unless it has already
+        # produced recommendations.
+        if kind == "summary" and i == last_summary_idx and not msg.get("recommended"):
+            if st.button("Get Book Recommendations", key=f"rec_btn_{i}"):
                 try:
-                    st.subheader("Book Recommendations:")
-                    recommendation_result = recommendation_system(
-                        st.session_state.summary_book_name, 
-                        st.session_state.summary_author_name, 
-                        st.session_state.summary_headers
+                    rec_result = recommendation_system(msg["book"], msg["author"], headers)
+                    st.session_state.messages[i]["recommended"] = True
+                    st.session_state.messages.append(
+                        {"role": "assistant", "kind": "recommendations", "data": rec_result}
                     )
-                    
-                    # Display the original recommendations
-                    st.markdown(recommendation_result["original_response"])
-                    
-                    # Display Amazon buttons for each recommendation
-                    recommendations = recommendation_result["recommendations"]
-                    
-                    if recommendations:
-                        st.subheader("🛒 Purchase Links:")
-                        for i, rec in enumerate(recommendations, 1):
-                            if 'title' in rec and 'author' in rec:
-                                amazon_link = generate_amazon_link(rec['title'], rec['author'])
-                                
-                                # Create a container for each book
-                                with st.container():
-                                    st.write(f"**{i}.** {rec['title']} by {rec['author']}")
-                                    if 'reason' in rec:
-                                        st.write(f"*{rec['reason']}*")
-                                    
-                                    # Amazon button
-                                    col1, col2 = st.columns([1, 4])
-                                    with col1:
-                                        st.link_button("🛒 Buy on Amazon", amazon_link)
-                                    with col2:
-                                        st.write("")  # Spacer
-                                    
-                                    st.divider()
-                    
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Error generating recommendations: {str(e)}")
 
-    elif agent_choice == "Library Manager":
-        user_query = st.text_input("Enter your query for the knowledge base:")
-        
-        if st.button("Retrieve Information"):
-            if not user_query:
-                st.error("Please enter your query.")
-            else:
-                # Update state with user query
-                initial_state["user_query"] = user_query
-                
-                # Execute the graph
-                result = graph.invoke(initial_state)
-                
-                if "response" in result:
-                    st.subheader("Response:")
-                    st.write(result["response"])
-                else:
-                    st.error(result.get("error", "An error occurred"))               
+# Chat input.
+if prompt := st.chat_input("Ask for a book summary or about your library..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    try:
+        reply, summary_args = run_agent(st.session_state.agent, prompt)
+        if summary_args:
+            st.session_state.messages.append(
+                {
+                    "role": "assistant",
+                    "kind": "summary",
+                    "content": reply,
+                    "book": summary_args.get("book_name", ""),
+                    "author": summary_args.get("author_name", ""),
+                }
+            )
+        else:
+            st.session_state.messages.append(
+                {"role": "assistant", "kind": "text", "content": reply}
+            )
+    except Exception as e:
+        st.session_state.messages.append(
+            {"role": "assistant", "kind": "text", "content": f"An error occurred: {str(e)}"}
+        )
+    st.rerun()
