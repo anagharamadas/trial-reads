@@ -1,13 +1,13 @@
 # TrialReads
 
-TrialReads is a Streamlit application that leverages LangChain and Open AI to generate summaries of the first three chapters of books. This tool helps you decide whether to purchase a book by providing concise chapter-by-chapter summaries.**
+TrialReads is a Streamlit application that leverages LangChain/LangGraph, LlamaIndex, and OpenAI to help you decide whether to read a book. You interact through a **single chat box**: a tool-calling agent reads each message and decides on its own whether to summarize a book or answer a question about your personal library — no tabs or mode switches.
 
 ## Features
-- **Chapter Summaries**: Generate detailed summaries of the first three chapters of any book (~250 words per chapter)
-- **Book Recommendations**: Get suggestions for similar books after generating summaries
-- **Library Manager**: Chatbot interface to query your personal reading history
-- Simple and intuitive user interface
-- Powered by OpenAI's advanced language model capabilities
+- **Conversational agent**: One chat interface backed by a LangGraph ReAct agent that automatically picks the right tool for each message (or just answers directly).
+- **Chapter Summaries**: Ask for a summary and get the first three chapters of any book summarized chapter by chapter (~250 words per chapter).
+- **Book Recommendations**: After a summary is generated, a **"Get Book Recommendations"** button appears that suggests 5 similar books, each with an Amazon purchase link.
+- **Library Manager (RAG)**: Ask natural-language questions about your personal reading history; answers are retrieved from your own documents (`data/Books.pdf`) via a ChromaDB vector store.
+- Powered by OpenAI's `gpt-4o-mini` and `text-embedding-3-small` models.
 
 
 ### Installation
@@ -35,28 +35,28 @@ Start the Streamlit app:
 
 ## Usage
 
-### Chapter Summaries & Recommendations
-1. Open the application in your browser (usually at `http://localhost:8501`)
-2. Input the book title (e.g., "Pride and Prejudice") and author
-3. Click **"Get Summary"** to generate chapter summaries
-4. After summary generation, click **"Get Recommendations"** for 5 similar books
+Open the application in your browser (usually at `http://localhost:8501`) and type into the chat box. The agent decides what to do based on what you ask — you don't pick a mode.
 
 > The OpenAI API key is read from a `.env` file (see **Environment Variables** below), not entered in the UI.
 
-### Library Manager
-1. Navigate to the **"Library Manager"** tab
-2. Upload your book history CSV file with these columns:
-   - `book_name`: Title of the book
-   - `author`: Author's name
-   - `status`: Reading status (`Reading`, `Yet to Buy`, `Ready to Start`, `Completed`)
-   - `year_completed`: Year finished (leave blank for unread books)
-3. Ask natural language questions in the chat interface:
-   ```plaintext
-   • "How many books by Dan Brown have I completed?"
-   • "Show me books I finished in 2023"
-   • "Which fantasy books am I currently reading?"
-   • "List all unread books by female authors"
+### Chapter Summaries & Recommendations
+1. Ask for a summary, e.g. *"Summarize the first three chapters of Pride and Prejudice."* (You can name the author, but the agent will fill it in from its own knowledge if you don't.)
+2. The agent calls its summary tool and returns a chapter-by-chapter summary.
+3. A **"Get Book Recommendations"** button appears beneath the summary — click it to get 5 similar books, each with a **"Buy on Amazon"** link.
 
+### Library Manager (RAG)
+Ask natural-language questions about your own reading history and the agent routes them to the library tool, which retrieves answers from your documents under `data/` (currently `data/Books.pdf`) using a persistent ChromaDB vector store. Examples:
+
+```plaintext
+• "How many books have I completed?"
+• "Which books am I currently reading?"
+• "What's in my collection by Dan Brown?"
+```
+
+The first library query embeds and indexes the documents in `data/` into `./chroma_db`; later queries reuse the persisted vectors. To re-index after changing the source documents, delete the `chroma_db/` directory (this triggers a full re-embed, which incurs OpenAI cost) and ask another library question.
+
+### Other questions
+If a message is neither a book summary request nor a library question, the agent simply answers it directly.
 
 *You can install all dependencies using the provided requirements.txt.*
 
@@ -89,6 +89,8 @@ OPENAI_API_KEY=your-openai-api-key-here
 
 - Streamlit for providing an easy-to-use framework for building web apps.
 
-- LangChain for enabling seamless integration with LLMs.
+- LangChain / LangGraph for the tool-calling agent and LLM integration.
 
-- OpenAI API for their powerful LLM API.
+- LlamaIndex and ChromaDB for the retrieval-augmented library search.
+
+- OpenAI API for their powerful LLM and embedding models.
