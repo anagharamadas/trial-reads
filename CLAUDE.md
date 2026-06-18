@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-TrialReads is a Streamlit app that uses LangChain/LangGraph, LlamaIndex, and OpenAI to (1) summarize the first three chapters of a book, (2) recommend similar books with Amazon purchase links, and (3) answer natural-language questions over a personal reading-history PDF via RAG.
+TrialReads is a Streamlit app that uses LangChain/LangGraph, LlamaIndex, and OpenAI to (1) summarize the first three chapters of a book, (2) recommend similar books with Amazon purchase links, and (3) answer natural-language questions over a personal reading-history spreadsheet via text-to-SQL.
 
 ## Commands
 
@@ -41,12 +41,8 @@ The three feature modules:
 
 - **`book_summariser.py`** — `get_summary(book_name, author_name, headers)`. Builds two `ChatPromptTemplate | ChatOpenAI` chains (`gpt-4o-mini`, temp 0): an "internal reasoning" chain and a final chapter-by-chapter summary chain. **Caveat:** the two are *not* actually chained — `internal_response` is computed and then discarded; only the final chain's output (which receives just `book_name`, so `author_name` never influences the result) is returned. The final prompt also has typos (`chaptersin`, no space before `250`). Strips any `<think>...</think>` blocks from output via regex (the `gpt-4o-mini` model never emits these, so it's currently a no-op).
 - **`recommendation_system.py`** — `recommendation_system(...)` wraps a single-node LangGraph that asks the LLM for exactly 5 recommendations in a fixed `"N. [Title] by [Author]\n   Reason: ..."` format. `parse_recommendations()` relies on that exact format to extract title/author/reason; `generate_amazon_link()` builds an Amazon search URL. Returns `{"original_response", "recommendations"}`. **Changing the prompt format will break the parser**, and vice versa — keep them in sync.
-- **`library_manager.py`** — `library_management_system(user_query, headers)`. A LlamaIndex RAG pipeline over a persistent **ChromaDB** at `./chroma_db` (collection `library_manager`). On first run (empty collection) it ingests every file in `data/` (currently `data/Books.pdf`) with `SentenceSplitter` + `OpenAIEmbedding` (`text-embedding-3-small`); subsequent runs reuse the persisted vectors. Queries use `tree_summarize`. The README describes this as a CSV-based reading-history chatbot, but the actual ingest source is the PDF(s) under `data/`.
-
-### Dependency pinning caveat
-
-`requirements.txt` pins `chromadb==0.4.15` and `protobuf==3.20.3` for compatibility; `library_manager.py` also sets `PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python` at runtime to avoid a protobuf incompatibility. Be cautious upgrading these.
+- **`library_manager.py`** — `library_management_system(user_query, headers)`. A LlamaIndex **text-to-SQL** pipeline, *not* vector RAG. On every call it reads the structured spreadsheet `data/Books.xlsx` (columns `Book`, `Author`, `Status`, `Year`; the sheet has a junk title row, so the real header is row 2 — `header=1`) into a fresh SQLite table `library` at `data/library.db` (`if_exists="replace"`, so edits to the sheet are always reflected). A `NLSQLTableQueryEngine` (`gpt-4o-mini`, temp 0) then translates the user's question into SQL and runs it. The `TABLE_CONTEXT` string is **load-bearing**: it tells the model the exact `Status` values (`Yet to Buy`, `Finished`, `Reading`, `Ready to Start`) and that `Year` is the *finished* year (NULL unless `Status='Finished'`), so "books read in 2024" compiles to `WHERE Status='Finished' AND Year=2024`. The generated SQL is logged via the module `logger` for inspection. This is exact for counts/filters/aggregates, where the old cosine-similarity retrieval could only approximate. Key extraction from `headers` follows the same Bearer-stripping convention as the other modules.
 
 ### Persisted artifacts
 
-`chroma_db/` (the vector store) and `data/Books.pdf` are committed to the repo. Deleting `chroma_db/` forces a full re-embed (and OpenAI cost) on the next Library Manager query.
+`data/Books.xlsx` (the source spreadsheet) is committed to the repo. `data/library.db` is rebuilt from it on every query and is gitignored — never commit it. The legacy `data/Books.pdf` and `chroma_db/` are no longer used by the code; they can be deleted.
