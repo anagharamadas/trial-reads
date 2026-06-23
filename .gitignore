@@ -1,1 +1,7 @@
 .env
+data/library.db
+
+# OS & Python artifacts
+.DS_Store
+__pycache__/
+*.py[cod]

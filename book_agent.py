@@ -33,7 +33,7 @@ def library_query_tool(query: str) -> str:
 
     Use this for anything about what the user has read, is currently reading, wants to buy,
     or finished and when (e.g. "how many books have I completed", "which books am I reading",
-    "what's in my collection"). This queries the user's private library data via RAG.
+    "what's in my collection"). This answers from the user's private library spreadsheet via text-to-SQL.
     """
     return library_management_system(query, _headers())
 

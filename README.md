@@ -6,8 +6,8 @@ TrialReads is a Streamlit application that leverages LangChain/LangGraph, LlamaI
 - **Conversational agent**: One chat interface backed by a LangGraph ReAct agent that automatically picks the right tool for each message (or just answers directly).
 - **Chapter Summaries**: Ask for a summary and get the first three chapters of any book summarized chapter by chapter (~250 words per chapter).
 - **Book Recommendations**: After a summary is generated, a **"Get Book Recommendations"** button appears that suggests 5 similar books, each with an Amazon purchase link.
-- **Library Manager (RAG)**: Ask natural-language questions about your personal reading history; answers are retrieved from your own documents (`data/Books.pdf`) via a ChromaDB vector store.
-- Powered by OpenAI's `gpt-4o-mini` and `text-embedding-3-small` models.
+- **Library Manager (text-to-SQL)**: Ask natural-language questions about your personal reading history; the question is translated into SQL and run against your structured spreadsheet (`data/Books.xlsx`) for exact answers.
+- Powered by OpenAI's `gpt-4o-mini` model.
 
 
 ### Installation
@@ -44,16 +44,16 @@ Open the application in your browser (usually at `http://localhost:8501`) and ty
 2. The agent calls its summary tool and returns a chapter-by-chapter summary.
 3. A **"Get Book Recommendations"** button appears beneath the summary — click it to get 5 similar books, each with a **"Buy on Amazon"** link.
 
-### Library Manager (RAG)
-Ask natural-language questions about your own reading history and the agent routes them to the library tool, which retrieves answers from your documents under `data/` (currently `data/Books.pdf`) using a persistent ChromaDB vector store. Examples:
+### Library Manager (text-to-SQL)
+Ask natural-language questions about your own reading history and the agent routes them to the library tool, which answers from your structured spreadsheet (`data/Books.xlsx`, with columns `Book`, `Author`, `Status`, `Year`) by translating your question into SQL. Because counts, filters, and aggregates run as real queries over the whole table, the answers are exact. Examples:
 
 ```plaintext
-• "How many books have I completed?"
-• "Which books am I currently reading?"
-• "What's in my collection by Dan Brown?"
+• "How many books did I read in 2024?"
+• "How many books are in my 'Yet to Buy' category?"
+• "Which books by Dan Brown have I finished?"
 ```
 
-The first library query embeds and indexes the documents in `data/` into `./chroma_db`; later queries reuse the persisted vectors. To re-index after changing the source documents, delete the `chroma_db/` directory (this triggers a full re-embed, which incurs OpenAI cost) and ask another library question.
+On each query the spreadsheet is loaded into a fresh SQLite database (`data/library.db`), so any edits you make to `data/Books.xlsx` are reflected immediately — no re-indexing step. The generated SQL is logged for each query so you can see exactly what ran.
 
 ### Other questions
 If a message is neither a book summary request nor a library question, the agent simply answers it directly.
@@ -91,6 +91,6 @@ OPENAI_API_KEY=your-openai-api-key-here
 
 - LangChain / LangGraph for the tool-calling agent and LLM integration.
 
-- LlamaIndex and ChromaDB for the retrieval-augmented library search.
+- LlamaIndex for the text-to-SQL library search.
 
-- OpenAI API for their powerful LLM and embedding models.
+- OpenAI API for their powerful LLM.
