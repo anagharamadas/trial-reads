@@ -7,7 +7,6 @@ langchain-openai
 langchain-core
 langgraph
 pandas
-openpyxl
 sqlalchemy
 ipykernel
 python-dotenv

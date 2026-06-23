@@ -1,17 +1,18 @@
 """Text-to-SQL library manager.
 
-Replaces the former ChromaDB vector-RAG pipeline. The user's personal library
-lives in a structured spreadsheet (`data/Books.xlsx`); we load it into a tiny
-SQLite table on every run and let the LLM translate natural-language questions
-into SQL via LlamaIndex's NLSQLTableQueryEngine. For tabular questions
-(counts, filters, aggregates) this is exact, where cosine-similarity retrieval
-could only ever be approximate.
+The user's personal library lives in a SQLite database (`data/library.db`).
+The app lets the LLM translate natural-language questions into SQL via
+LlamaIndex's NLSQLTableQueryEngine. For tabular questions (counts, filters,
+aggregates) this is exact, where cosine-similarity retrieval could only ever
+be approximate.
+
+The SQLite database is the permanent source of truth and is maintained
+separately (migrated from Books.xlsx initially, updated via a migration script).
 """
 
 import logging
 import os
 
-import pandas as pd
 from sqlalchemy import create_engine
 
 from llama_index.core import SQLDatabase
@@ -20,7 +21,6 @@ from llama_index.llms.openai import OpenAI
 
 logger = logging.getLogger(__name__)
 
-EXCEL_PATH = "data/Books.xlsx"
 DB_PATH = "data/library.db"
 TABLE_NAME = "library"
 
@@ -52,28 +52,9 @@ def _api_key_from_headers(headers):
     return auth_header  # fallback if not in Bearer format
 
 
-def _build_engine():
-    """Read the Excel sheet into a fresh SQLite table and return a SQLAlchemy engine.
-
-    Rebuilt on every call so the answers always reflect the current spreadsheet.
-    The sheet has a junk title row above the real header, so the header is on
-    the second row (header=1).
-    """
-    df = pd.read_excel(EXCEL_PATH, header=1)
-    # The real sheet has exactly these four columns, in order.
-    df = df.iloc[:, :4]
-    df.columns = ["Book", "Author", "Status", "Year"]
-
-    # Tidy up: drop rows with no title, trim whitespace, coerce Year to a
-    # nullable integer (it arrives as floats like 2025.0 because of the NULLs).
-    df = df.dropna(subset=["Book"]).copy()
-    for col in ["Book", "Author", "Status"]:
-        df[col] = df[col].astype("string").str.strip()
-    df["Year"] = pd.to_numeric(df["Year"], errors="coerce").astype("Int64")
-
-    engine = create_engine(f"sqlite:///{DB_PATH}")
-    df.to_sql(TABLE_NAME, engine, if_exists="replace", index=False)
-    return engine
+def _get_engine():
+    """Connect to the existing SQLite database (permanent source of truth)."""
+    return create_engine(f"sqlite:///{DB_PATH}")
 
 
 def library_management_system(user_query, headers):
@@ -84,7 +65,7 @@ def library_management_system(user_query, headers):
     """
     os.environ["OPENAI_API_KEY"] = _api_key_from_headers(headers)
 
-    engine = _build_engine()
+    engine = _get_engine()
     sql_database = SQLDatabase(engine, include_tables=[TABLE_NAME])
 
     llm = OpenAI(model="gpt-4o-mini", temperature=0)

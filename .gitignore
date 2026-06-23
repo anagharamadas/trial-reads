@@ -1,5 +1,5 @@
 .env
-data/library.db
+data/library.db  # permanent library database - not source controlled
 
 # OS & Python artifacts
 .DS_Store
